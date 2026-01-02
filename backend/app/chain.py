@@ -37,12 +37,12 @@ def get_web3() -> Web3:
         # Log connection info
         chain_id = w3.eth.chain_id
         block_number = w3.eth.block_number
-        logger.info(f"✅ Connected to Web3 - Chain ID: {chain_id}, Block: {block_number}")
+        logger.info(f"Connected to Web3 - Chain ID: {chain_id}, Block: {block_number}")
 
         return w3
 
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Web3: {str(e)}")
+        logger.error(f"Failed to initialize Web3: {str(e)}")
         raise RuntimeError(f"Web3 initialization failed: {str(e)}") from e
 
 
@@ -61,12 +61,12 @@ def get_signer() -> LocalAccount:
             private_key = f"0x{settings.private_key}"
 
         account = Account.from_key(private_key)
-        logger.info(f"✅ Signer initialized: {account.address}")
+        logger.info(f"Signer initialized: {account.address}")
 
         return account
 
     except Exception as e:
-        logger.error(f"❌ Invalid PRIVATE_KEY format: {str(e)}")
+        logger.error(f"Invalid PRIVATE_KEY format: {str(e)}")
         raise RuntimeError("Invalid PRIVATE_KEY format. Ensure it's a valid Ethereum private key") from e
 
 
@@ -135,9 +135,9 @@ def wait_for_transaction(tx_hash: str, timeout: int = 120) -> TxReceipt:
     if not tx_hash.startswith('0x'):
         tx_hash = f"0x{tx_hash}"
 
-    logger.info(f"⏳ Waiting for transaction {tx_hash}...")
+    logger.info(f"Waiting for transaction {tx_hash}...")
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
-    logger.info(f"✅ Transaction mined in block {receipt['blockNumber']}")
+    logger.info(f"Transaction mined in block {receipt['blockNumber']}")
 
     return receipt
 
@@ -214,7 +214,7 @@ def health_check() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"❌ Health check failed: {str(e)}")
+        logger.error(f"Health check failed: {str(e)}")
         return {
             "status": "unhealthy",
             "error": str(e),

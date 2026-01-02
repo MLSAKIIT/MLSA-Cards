@@ -11,8 +11,6 @@ from ..config import get_settings
 from ..database import get_db
 from ..models import User
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -47,7 +45,6 @@ class VerifyRequest(BaseModel):
 
 @router.post("/nonce")
 async def get_nonce_endpoint(req: NonceRequest):
-    from ..auth import AUTH_MESSAGE_VERSION
     nonce = generate_nonce(req.wallet)
     settings = get_settings()
     message = (
