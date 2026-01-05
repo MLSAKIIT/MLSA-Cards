@@ -23,6 +23,7 @@ let signer;
 let wallet;
 let token;
 let currentChainId;
+let providerEventsBound = false;
 
 const networkNames = {
   "31337": "Hardhat (Localhost)",
@@ -38,6 +39,43 @@ function showStatus(message, type = "info") {
   badge.textContent = message;
   statusEl.innerHTML = "";
   statusEl.appendChild(badge);
+}
+
+function applyNetworkDisplay(chainIdValue) {
+  currentChainId = chainIdValue;
+  chainIdEl.textContent = currentChainId;
+  networkNameEl.textContent = networkNames[currentChainId] || "Unknown Network";
+}
+
+function bindProviderEvents() {
+  if (!window.ethereum || providerEventsBound) return;
+  // Keep UI in sync with MetaMask changes.
+  window.ethereum.on("chainChanged", (chainIdHex) => {
+    const parsed = parseInt(chainIdHex, 16).toString();
+    applyNetworkDisplay(parsed);
+    // Full reload guarantees fresh provider/signer/token state.
+    window.location.reload();
+  });
+
+  window.ethereum.on("accountsChanged", (accounts) => {
+    if (!accounts || !accounts.length) {
+      wallet = undefined;
+      walletEl.textContent = "Not connected";
+      signinBtn.disabled = true;
+      mintBtn.disabled = true;
+      showStatus("Please connect MetaMask", "error");
+      return;
+    }
+    wallet = accounts[0];
+    walletEl.textContent = wallet;
+    // Token remains tied to the prior account; require fresh sign-in.
+    token = undefined;
+    signinBtn.disabled = false;
+    mintBtn.disabled = true;
+    showStatus("Account changed. Please sign in again.", "info");
+  });
+
+  providerEventsBound = true;
 }
 
 function updateMintPreview() {
@@ -60,17 +98,15 @@ async function connect() {
       showStatus("MetaMask not found", "error");
       return;
     }
+    bindProviderEvents();
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send("eth_requestAccounts", []);
     wallet = accounts[0];
     signer = await provider.getSigner();
 
     const network = await provider.getNetwork();
-    currentChainId = network.chainId.toString();
-
+    applyNetworkDisplay(network.chainId.toString());
     walletEl.textContent = wallet;
-    chainIdEl.textContent = currentChainId;
-    networkNameEl.textContent = networkNames[currentChainId] || "Unknown Network";
     connectionInfoEl.style.display = "grid";
     signinBtn.disabled = false;
     showStatus("Wallet connected", "connected");

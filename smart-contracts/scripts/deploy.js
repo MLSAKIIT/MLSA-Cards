@@ -7,9 +7,11 @@ async function main() {
 
   const GameCollectible = await hre.ethers.getContractFactory("GameCollectible");
   const gameCollectible = await GameCollectible.deploy(name, symbol, baseURI);
-  await gameCollectible.deployed();
+  await gameCollectible.waitForDeployment();
 
-  console.log("GameCollectible deployed to:", gameCollectible.address);
+
+  const address = await gameCollectible.getAddress();
+  console.log("GameCollectible deployed to:", address);
 }
 
 main().catch((error) => {
