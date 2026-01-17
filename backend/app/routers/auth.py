@@ -6,10 +6,11 @@ from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 from datetime import datetime
 
-from ..auth import generate_nonce, pop_nonce, verify_signature, issue_jwt, verify_jwt
+from ..auth import (generate_nonce, get_nonce, remove_nonce, verify_signature, issue_jwt, verify_jwt, AUTH_MESSAGE_VERSION)
 from ..config import get_settings
 from ..database import get_db
 from ..models import User
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -43,21 +44,25 @@ class VerifyRequest(BaseModel):
 
 
 @router.post("/nonce")
-async def get_nonce(req: NonceRequest):
+async def get_nonce_endpoint(req: NonceRequest):
     nonce = generate_nonce(req.wallet)
     settings = get_settings()
-    message = f"Sign in to {settings.app_name} with wallet {req.wallet.lower()} on chain {settings.chain_id}. Nonce: {nonce}"
+    message = (
+        f"{AUTH_MESSAGE_VERSION}\n"
+        f"Sign in to {settings.app_name} with wallet {req.wallet.lower()} "
+        f"on chain {settings.chain_id}. Nonce: {nonce}"
+    )
     return {"nonce": nonce, "message": message}
 
 
 @router.post("/verify")
 async def verify(req: VerifyRequest, db: Session = Depends(get_db)):
     settings = get_settings()
-    nonce = pop_nonce(req.wallet)
-    if not nonce:
+    stored = get_nonce(req.wallet)
+    if not stored:
         raise HTTPException(status_code=400, detail="Nonce not found or expired")
 
-    if not verify_signature(req.wallet, nonce, req.signature, settings.chain_id, settings.app_name):
+    if not verify_signature(req.wallet, stored[0], req.signature, settings.chain_id, settings.app_name):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     # Find or create user by wallet
@@ -137,11 +142,11 @@ async def link_wallet(req: VerifyRequest, token: str, db: Session = Depends(get_
 
         # Verify wallet signature
         settings = get_settings()
-        nonce = pop_nonce(req.wallet)
-        if not nonce:
+        stored = get_nonce(req.wallet)
+        if not stored:
             raise HTTPException(status_code=400, detail="Nonce not found or expired")
 
-        if not verify_signature(req.wallet, nonce, req.signature, settings.chain_id, settings.app_name):
+        if not verify_signature(req.wallet, stored[0], req.signature, settings.chain_id, settings.app_name):
             raise HTTPException(status_code=401, detail="Invalid signature")
 
         # Link wallet to user
